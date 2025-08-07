@@ -1,6 +1,6 @@
 <?php
 /**
- *  Vendor\Invisible\ML\Scorer
+ *  Dominservice\Invisible\ML\Scorer
  *
  *  ▸ Handles THREE scoring scenarios in one class:
  *      ①  model "linear-weights"  → σ(w·x+b)
@@ -10,7 +10,7 @@
  *  ▸ Is 100% deterministic (no RNG).
  *  ▸ Model loaded from disk only once per process (static cache).
  */
-namespace Vendor\Invisible\ML;
+namespace Dominservice\Invisible\ML;
 
 use InvalidArgumentException;
 
