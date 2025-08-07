@@ -9,7 +9,7 @@ class InvisibleServiceProvider extends LaravelServiceProvider
 
     public function boot()
     {
-        /* publikacja plików */
+        /* publishing files */
         $this->publishes([
             __DIR__.'/../config/invis.php' => config_path('invis.php'),
             __DIR__.'/../public'           => public_path('vendor/invis-captcha'),
@@ -40,5 +40,22 @@ class InvisibleServiceProvider extends LaravelServiceProvider
             }
             return $html;
         });
+
+        // ── AUTO-GENERATION of model.json ──────────────────────────────────
+        $ml = config('invis.ml_model');
+
+        if ($ml['enabled'] && ($ml['auto_generate'] ?? false)) {
+            \Dominservice\Invisible\ML\ModelGenerator::ensure(
+                $ml['path'],
+                $ml['mode'] ?? 'thresholds'
+            );
+        }
+
+        // ⇒ REGISTRATION of built-in Artisan command
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Dominservice\Invisible\Console\Commands\GenerateModel::class,
+            ]);
+        }
     }
 }

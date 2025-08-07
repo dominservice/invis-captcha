@@ -45,6 +45,17 @@ After installing, publish the configuration file:
 php artisan vendor:publish --tag="invis"
 ```
 
+```bash
+# generates default thresholds model – only when file doesn't exist
+php artisan invis:model:generate
+
+# forces overwrite
+php artisan invis:model:generate thresholds --force
+
+# variant with linear weights
+php artisan invis:model:generate weights
+```
+
 ## Configuration
 
 The configuration file `config/invis.php` allows you to customize:
@@ -58,22 +69,6 @@ The configuration file `config/invis.php` allows you to customize:
 
 Toggle any module with `true` / `false`:
 
-```php
-'threshold' => 0.7,
-'secret'    => env('INVIS_SECRET'),
-
-'track_pixel'     => ['enabled'=>true],
-'polyfill_poison' => ['enabled'=>true],
-'honey_field'     => ['enabled'=>true,'name'=>'website'],
-'dynamic_fields'  => ['enabled'=>true,'length'=>8],
-'ml_model'        => ['enabled'=>false,'path'=>storage_path('app/invis/model.json')],
-'turnstile'       => [
-    'enabled'  => true,
-    'sitekey'  => env('TURNSTILE_SITEKEY'),
-    'secret'   => env('TURNSTILE_SECRET'),
-    'fallback' => 0.30,
-],
-```
 ## Framework-specific wiring
 ### Laravel ≤ 10 (classic structure)
 __Register middleware alias__
@@ -134,12 +129,12 @@ Route::post('/contact', ContactController::class)
 
 ```php
 // In a route file
-Route::post('/submit', 'FormController@submit')->middleware('invis.verify');
+Route::post('/submit', 'FormController@submit')->middleware('verify.invis');
 
 // Or in a controller
 public function __construct()
 {
-    $this->middleware('invis.verify');
+    $this->middleware('verify.invis');
 }
 ```
 
@@ -162,7 +157,7 @@ You can specify a custom score threshold for specific routes:
 
 ```php
 Route::post('/contact', 'ContactController@submit')
-    ->middleware('invis.verify:0.7'); // Higher threshold for stricter protection
+    ->middleware('verify.invis:0.7'); // Higher threshold for stricter protection
 ```
 
 ### Cloudflare Turnstile Integration
@@ -172,8 +167,9 @@ Enable Turnstile in your config file and add your site and secret keys:
 ```php
 'turnstile' => [
     'enabled' => true,
-    'site_key' => 'your-site-key',
+    'sitekey' => 'your-site-key',
     'secret' => 'your-secret-key',
+    'fallback' => 0.30,
 ],
 ```
 

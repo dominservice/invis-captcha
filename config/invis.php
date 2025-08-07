@@ -1,10 +1,10 @@
 <?php
-/* Publikowane do config_path('invis.php') */
+/* Published to config_path('invis.php') */
 return [
     'threshold' => 0.7,
     'secret'    => env('INVIS_SECRET', \Illuminate\Support\Str::random(32)),
 
-    /* — moduły — */
+    /* — modules — */
     'track_pixel' => [
         'enabled' => true,
         'route'   => '/invis-captcha/pixel',
@@ -27,8 +27,10 @@ return [
     ],
 
     'ml_model'  => [
-        'enabled' => false,
+        'enabled' => true,
         'path'    => storage_path('app/invis/model.json'),
+        'auto_generate' => true,
+        'mode'    => 'thresholds',  // 'weights' or 'thresholds'
     ],
 
     'turnstile' => [
