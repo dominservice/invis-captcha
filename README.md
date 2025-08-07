@@ -160,6 +160,62 @@ Route::post('/contact', 'ContactController@submit')
     ->middleware('verify.invis:0.7'); // Higher threshold for stricter protection
 ```
 
+### JavaScript Form Submissions
+
+To use the invisible captcha with JavaScript/AJAX form submissions:
+
+1. Add the Blade directive to your page (outside the form):
+```blade
+@invisCaptcha
+```
+
+2. Add the `data-invis` attribute to your form:
+```html
+<form id="myForm" data-invis>
+    <!-- Your form fields -->
+</form>
+```
+
+3. In your JavaScript, wait for the token to be injected before submitting:
+```javascript
+document.getElementById('submitButton').addEventListener('click', async function(e) {
+    e.preventDefault();
+    
+    // Wait for the token to be injected (if not already)
+    if (!document.querySelector('input[name="invis_token"]')) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    const form = document.getElementById('myForm');
+    const formData = new FormData(form);
+    
+    // Send with fetch
+    fetch('/your-endpoint', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Handle response
+    })
+    .catch(error => {
+        // Handle error
+    });
+    
+    // Or with axios
+    // axios.post('/your-endpoint', formData)
+    //     .then(response => { /* Handle response */ })
+    //     .catch(error => { /* Handle error */ });
+});
+```
+
+4. Ensure your endpoint is protected with the middleware:
+```php
+Route::post('/your-endpoint', 'YourController@handle')
+    ->middleware('verify.invis');
+```
+
 ### Cloudflare Turnstile Integration
 
 Enable Turnstile in your config file and add your site and secret keys:
