@@ -80,7 +80,7 @@ __Register middleware alias__
 
 ```php
 // app/Http/Kernel.php   (inside the $routeMiddleware array)
-'verify.invis' => \Vendor\Invisible\Middleware\Verify::class,
+'verify.invis' => \Dominservice\Invisible\Middleware\Verify::class,
 ```
 __Protect a route__
 ```php
@@ -93,7 +93,7 @@ Laravel 11+ uses bootstrap-driven configuration.
 // bootstrap/app.php  (excerpt)
 
 use Illuminate\Foundation\Configuration\Middleware;
-use Vendor\Invisible\Middleware\Verify;
+use Dominservice\Invisible\Middleware\Verify;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
