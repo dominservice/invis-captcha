@@ -9,7 +9,11 @@ Route::post('/invis-captcha/token', function(\Illuminate\Http\Request $req){
     $score = 1 - ($sig['wd']?0.4:0) - ($sig['mm']<3?0.2:0) - ($sig['kb']<1?0.2:0);
 
     if (config('invis.ml_model.enabled')) {
-        $score = Scorer::load(config('invis.ml_model.path'))->predict($sig);
+        $modelPath = config('invis.ml_model.path');
+        if (!is_string($modelPath)) {
+            $modelPath = storage_path('app/invis/model.json');
+        }
+        $score = Scorer::load($modelPath)->predict($sig);
     }
 
     $jwt = JWT::encode([

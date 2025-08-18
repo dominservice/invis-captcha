@@ -5,7 +5,10 @@ use Illuminate\Support\Facades\Blade;
 
 class InvisibleServiceProvider extends LaravelServiceProvider
 {
-    public function register() { }
+    public function register() 
+    {
+        $this->mergeConfigFrom(__DIR__.'/../config/invis.php', 'invis');
+    }
 
     public function boot()
     {
@@ -16,6 +19,12 @@ class InvisibleServiceProvider extends LaravelServiceProvider
             __DIR__.'/../resources/views'  => resource_path('views/vendor/invis'),
         ], 'invis');
         
+        /* load views */
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'invis');
+    
+        /* load routes */
+        $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+    
         /* register middleware */
         $this->app['router']->aliasMiddleware('invis.verify', \Dominservice\Invisible\Middleware\Verify::class);
 
@@ -44,11 +53,21 @@ class InvisibleServiceProvider extends LaravelServiceProvider
         // ── AUTO-GENERATION of model.json ──────────────────────────────────
         $ml = config('invis.ml_model');
 
-        if ($ml['enabled'] && ($ml['auto_generate'] ?? false)) {
-            \Dominservice\Invisible\ML\ModelGenerator::ensure(
-                $ml['path'],
-                $ml['mode'] ?? 'thresholds'
-            );
+        if ($ml['enabled']) {
+            // Ensure the directory exists
+            $modelPath = $ml['path'];
+            if (!is_string($modelPath)) {
+                $modelPath = storage_path('app/invis/model.json');
+            }
+            
+            \Illuminate\Support\Facades\File::ensureDirectoryExists(dirname($modelPath));
+            
+            if ($ml['auto_generate'] ?? false) {
+                \Dominservice\Invisible\ML\ModelGenerator::ensure(
+                    $modelPath,
+                    $ml['mode'] ?? 'thresholds'
+                );
+            }
         }
 
         // ⇒ REGISTRATION of built-in Artisan command
