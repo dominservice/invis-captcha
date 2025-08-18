@@ -19,8 +19,16 @@ class InvisibleServiceProvider extends LaravelServiceProvider
             __DIR__.'/../resources/views'  => resource_path('views/vendor/invis'),
         ], 'invis');
         
+        /* publish translations */
+        $this->publishes([
+            __DIR__.'/../resources/lang' => resource_path('lang/vendor/invis'),
+        ], 'invis-translations');
+        
         /* load views */
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'invis');
+        
+        /* load translations */
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'invis');
     
         /* load routes */
         $this->loadRoutesFrom(__DIR__.'/Http/routes.php');

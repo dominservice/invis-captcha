@@ -229,6 +229,33 @@ Enable Turnstile in your config file and add your site and secret keys:
 ],
 ```
 
+## Translations
+
+The package includes translations for error messages in English and Polish. You can publish the translation files to customize them:
+
+```bash
+php artisan vendor:publish --tag="invis-translations"
+```
+
+This will publish the translation files to `resources/lang/vendor/invis/` where you can edit them or add new languages.
+
+### Available Error Messages
+
+The following error messages are available for translation:
+
+- `honey_field` - Displayed when a bot fills the honey field
+- `missing_token` - Displayed when the token is missing from the request
+- `invalid_token` - Displayed when the token is invalid
+- `token_expired` - Displayed when the token has expired
+- `invalid_signature` - Displayed when the token signature is invalid
+- `ip_mismatch` - Displayed when the IP address doesn't match
+- `score_too_low` - Displayed when the score is below the threshold
+- `turnstile_error` - Displayed when there's an error with Turnstile verification
+
+### Adding a New Language
+
+To add a new language, create a new directory in `resources/lang/vendor/invis/` with your language code (e.g., `de` for German) and copy the structure from the English files.
+
 ## Testing
 
 ```bash
