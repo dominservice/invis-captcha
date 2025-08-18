@@ -1,3 +1,8 @@
 .idea
 vendor
 composer.lock
+/storage/*
+!/storage/app/
+/storage/app/*
+!/storage/app/invis/
+!/storage/app/invis/model.json

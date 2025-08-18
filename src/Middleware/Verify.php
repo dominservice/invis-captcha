@@ -83,9 +83,23 @@ class Verify
 
         /* normalizacja dynamicznych pól */
         if ($cfg['dynamic_fields']['enabled']) {
-            foreach ($req->all() as $k=>$v)
-                if ($o = DynamicFields::original($k))
-                    $req->merge([$o=>$v]);
+            $originalFields = [];
+            $dynamicFields = [];
+            
+            foreach ($req->all() as $k=>$v) {
+                if ($o = DynamicFields::original($k)) {
+                    $originalFields[$o] = $v;
+                    $dynamicFields[] = $k;
+                }
+            }
+            
+            // Remove dynamic fields and add original ones
+            if (!empty($originalFields)) {
+                $req->merge($originalFields);
+                foreach ($dynamicFields as $field) {
+                    $req->request->remove($field);
+                }
+            }
         }
         return $next($req);
     }
