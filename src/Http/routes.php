@@ -26,6 +26,21 @@ Route::post('/invis-captcha/token', function(\Illuminate\Http\Request $req){
     return ['token'=>$jwt,'score'=>$score];
 });
 
+/* Save dynamic field mappings */
+if (config('invis.dynamic_fields.enabled')) {
+    Route::post('/invis-captcha/field-map', function(\Illuminate\Http\Request $req){
+        $map = session('_invis_field_map', []);
+        $newMappings = $req->input('mappings', []);
+        
+        foreach ($newMappings as $original => $dynamic) {
+            $map[$original] = $dynamic;
+        }
+        
+        session()->put('_invis_field_map', $map);
+        return ['success' => true];
+    });
+}
+
 /* 1-px pixel */
 if (config('invis.track_pixel.enabled')) {
     Route::get(config('invis.track_pixel.route'), function(\Illuminate\Http\Request $r){

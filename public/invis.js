@@ -57,6 +57,8 @@
 
     /* --------------- dynamiczne pola --------------- */
     if (C.dynamic_fields.enabled) {
+        const fieldMappings = {};
+        
         document.querySelectorAll('form[data-invis]').forEach(f=>{
             [...f.elements].forEach(el=>{
                 const pref = C.dynamic_fields.prefixes
@@ -67,9 +69,22 @@
                             .map(b=>('0'+(b%36).toString(36)).slice(-1)).join('');
                     el.dataset.dyn = el.name;           // zapisz oryginał
                     el.name = newName;
+                    
+                    // Add to mappings
+                    fieldMappings[pref] = newName;
                 }
             });
         });
+        
+        // Send mappings to server if we have any
+        if (Object.keys(fieldMappings).length > 0) {
+            fetch('/invis-captcha/field-map', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mappings: fieldMappings}),
+                credentials: 'same-origin'
+            }).catch(err => console.error('Failed to save field mappings:', err));
+        }
     }
 
     /* --------------- wstrzyknięcie tokenu --------------- */
