@@ -8,6 +8,11 @@ class InvisibleServiceProvider extends LaravelServiceProvider
     public function register() 
     {
         $this->mergeConfigFrom(__DIR__.'/../config/invis.php', 'invis');
+        
+        // Bind the Invisible class to the service container
+        $this->app->singleton('invis', function ($app) {
+            return new Invisible();
+        });
     }
 
     public function boot()
@@ -56,6 +61,11 @@ class InvisibleServiceProvider extends LaravelServiceProvider
                 $html .= '<input type="text" name="'.$name.'" style="display:none" tabindex="-1" autocomplete="off">';
             }
             return $html;
+        });
+        
+        /* directive @invisLivewire for Livewire forms */
+        Blade::directive('invisLivewire', function () {
+            return "<?php echo app('invis')->livewireScript(); ?>";
         });
 
         // ── AUTO-GENERATION of model.json ──────────────────────────────────

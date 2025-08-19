@@ -177,6 +177,22 @@ To use the invisible captcha with JavaScript/AJAX form submissions:
 ```
 
 3. In your JavaScript, wait for the token to be injected before submitting:
+
+### Livewire Form Integration
+
+To use the invisible captcha with Livewire forms:
+
+1. Add the Livewire-specific Blade directive to your page (outside the Livewire component):
+```blade
+@invisLivewire
+```
+
+2. Your Livewire forms will be automatically detected and protected. The directive:
+   - Automatically adds the `data-invis` attribute to Livewire forms
+   - Handles dynamic form updates through Livewire
+   - Re-initializes protection after Livewire updates
+
+3. No additional configuration is needed in your Livewire components
 ```javascript
 document.getElementById('submitButton').addEventListener('click', async function(e) {
     e.preventDefault();

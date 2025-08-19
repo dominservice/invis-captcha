@@ -1,6 +1,11 @@
 /* global turnstile */
 (async () => {
-    const C = JSON.parse(document.currentScript.dataset.cfg || '{}');
+    // Get config from script tag or window.invisConfig (for Livewire)
+    const C = JSON.parse(
+        (document.currentScript && document.currentScript.dataset.cfg) || 
+        window.invisConfig || 
+        '{}'
+    );
 
     /* --------------- zbieranie sygnałów --------------- */
     await new Promise(r => setTimeout(r, 400));           // zbierz ruch użytk.
