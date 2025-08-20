@@ -182,17 +182,62 @@ To use the invisible captcha with JavaScript/AJAX form submissions:
 
 To use the invisible captcha with Livewire forms:
 
-1. Add the Livewire-specific Blade directive to your page (outside the Livewire component):
+1. Add the Livewire-specific Blade directive to your **main layout file** (not inside Livewire components):
 ```blade
-@invisLivewire
+<!-- In resources/views/layouts/app.blade.php or your main layout file -->
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- ... other head elements ... -->
+    <title>Your App</title>
+    @livewireStyles
+</head>
+<body>
+    <!-- ... your layout content ... -->
+    
+    {{ $slot ?? $content ?? yield('content') }}
+    
+    @livewireScripts
+    @invisLivewire  <!-- Place this AFTER @livewireScripts -->
+</body>
+</html>
 ```
 
-2. Your Livewire forms will be automatically detected and protected. The directive:
+2. Important placement notes:
+   - The `@invisLivewire` directive must be placed in your main layout file, not in individual Livewire component views
+   - It should be placed after `@livewireScripts` to ensure Livewire is loaded first
+   - You only need to include it once in your main layout
+
+3. Your Livewire forms will be automatically detected and protected. The directive:
    - Automatically adds the `data-invis` attribute to Livewire forms
    - Handles dynamic form updates through Livewire
    - Re-initializes protection after Livewire updates
 
-3. No additional configuration is needed in your Livewire components
+4. No additional configuration is needed in your Livewire components
+
+5. Ensure your Livewire component's form submission method is protected with the middleware:
+```php
+// In your controller that handles the Livewire form submission
+public function submit()
+{
+    // This method needs to be protected with the middleware
+    $this->middleware('verify.invis');
+    
+    // Your form processing logic
+}
+```
+
+### Troubleshooting Livewire Integration
+
+If the Livewire integration is not working:
+
+1. Make sure the `@invisLivewire` directive is placed in your main layout file, not in individual Livewire components
+2. Verify that it comes AFTER `@livewireScripts` in your HTML
+3. Check your browser console for any JavaScript errors
+4. Verify that your forms have Livewire attributes (wire:submit, wire:model, etc.)
+5. Make sure you've published the package assets: `php artisan vendor:publish --tag="invis"`
+6. Check that the middleware is properly registered and applied to your form submission handler
+
 ```javascript
 document.getElementById('submitButton').addEventListener('click', async function(e) {
     e.preventDefault();

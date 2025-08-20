@@ -19,7 +19,7 @@ class Invisible
         return "
         <script>
             // Set global config for invis.js
-            window.invisConfig = '".e($cfg)."';
+            window.invisConfig = ".e($cfg).";
             
             document.addEventListener('livewire:load', function() {
                 // Initialize on page load
@@ -32,27 +32,25 @@ class Invisible
                 
                 function initInvisForLivewire() {
                     // Add data-invis attribute to Livewire forms if not already present
-                    document.querySelectorAll('form[wire\\\\:submit]').forEach(form => {
+                    document.querySelectorAll('form[wire\\\\:submit], form[wire\\\\:submit\\.prevent], form[wire\\\\:submit\\.debounce], form[wire\\\\:submit\\.throttle], form[wire\\\\:model]').forEach(form => {
                         if (!form.hasAttribute('data-invis')) {
                             form.setAttribute('data-invis', '');
                         }
                     });
                     
-                    // Check if invis.js is already loaded
-                    if (!document.querySelector('script[src*=\"invis.js\"]')) {
-                        const script = document.createElement('script');
-                        script.defer = true;
-                        script.src = '".asset('vendor/invis-captcha/invis.js')."';
-                        document.head.appendChild(script);
-                    } else {
-                        // If script is already loaded, we need to re-run it for newly added forms
-                        // This will create a new instance that will use window.invisConfig
-                        const existingScript = document.querySelector('script[src*=\"invis.js\"]');
-                        const newScript = document.createElement('script');
-                        newScript.defer = true;
-                        newScript.src = existingScript.src;
-                        document.head.appendChild(newScript);
-                    }
+                    // Always load a fresh instance of invis.js to ensure it runs with the latest forms
+                    // Remove any existing dynamically added invis scripts (not the original one)
+                    document.querySelectorAll('script.invis-dynamic').forEach(script => {
+                        script.remove();
+                    });
+                    
+                    // Create and add a new script element
+                    const script = document.createElement('script');
+                    script.className = 'invis-dynamic';
+                    script.src = '".asset('vendor/invis-captcha/invis.js')."';
+                    
+                    // Execute immediately without defer to ensure it runs right away
+                    document.head.appendChild(script);
                 }
             });
         </script>";
