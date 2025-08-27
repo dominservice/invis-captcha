@@ -178,6 +178,35 @@ To use the invisible captcha with JavaScript/AJAX form submissions:
 
 3. In your JavaScript, wait for the token to be injected before submitting:
 
+### Direct Function Call
+
+You can also call the invisCaptcha function directly at any time:
+
+```javascript
+// Call with default configuration
+window.invisCaptcha().then(result => {
+    console.log('Token:', result.token);
+    console.log('Score:', result.score);
+});
+
+// Or with custom configuration
+window.invisCaptcha({
+    // Custom configuration options
+}).then(result => {
+    // Use the token and score
+    const { token, score } = result;
+    
+    // Add token to your form or request
+    document.querySelector('input[name="invis_token"]').value = token;
+});
+```
+
+This is useful for:
+- Single-page applications
+- Dynamic form creation
+- Custom validation flows
+- Refreshing tokens without page reload
+
 ### Livewire Form Integration
 
 To use the invisible captcha with Livewire forms:
@@ -217,15 +246,50 @@ To use the invisible captcha with Livewire forms:
 
 5. Ensure your Livewire component's form submission method is protected with the middleware:
 ```php
+
+// in blade 
+div x-data="{ root: null, mo: null }"
+                             x-init="
+        root = $el;
+        mo = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                for (const node of m.addedNodes) {
+                    if (!(node instanceof HTMLElement)) continue;
+
+                    const inp = node.matches?.('input[type=hidden][name=invis_token]')
+                        ? node
+                        : node.querySelector?.('input[type=hidden][name=invis_token]');
+
+                    if (inp) {
+                        $wire.set('invis_token', inp.value);
+                        inp.addEventListener('input',  () => $wire.set('invis_token', inp.value));
+                        inp.addEventListener('change', () => $wire.set('invis_token', inp.value));
+                    }
+                }
+            }
+        });
+        mo.observe(root, { childList: true, subtree: true });
+     ">
+                        <form wire:submit.prevent="submitReport" data-invis>
+
+
+// in component
 // In your controller that handles the Livewire form submission
 public function submit()
 {
     // This method needs to be protected with the middleware
-    $this->middleware('verify.invis');
+        try {
+            app(\Dominservice\Invisible\Middleware\Verify::class)
+                ->handle(request(), fn () => true);
+        } catch (HttpException $e) {
+            $this->showVerificationError = true;
+        }
     
     // Your form processing logic
 }
 ```
+
+> **Note:** The middleware automatically detects and processes Livewire requests. It will look for tokens and form fields in both regular POST data and Livewire component data. The middleware supports both the standard Livewire format and the newer format with `snapshot` (JSON string) and `updates` fields. This means you don't need any special configuration to use the middleware with Livewire forms - it just works!
 
 ### Troubleshooting Livewire Integration
 

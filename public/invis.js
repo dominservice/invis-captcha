@@ -1,11 +1,15 @@
 /* global turnstile */
-(async () => {
-    // Get config from script tag or window.invisConfig (for Livewire)
+// Define the main function that can be called at any time
+window.invisCaptcha = async function(customConfig = {}) {
+    // Get config from script tag, window.invisConfig (for Livewire), or passed customConfig
     const C = JSON.parse(
-        (document.currentScript && document.currentScript.dataset.cfg) || 
-        window.invisConfig || 
+        (document.currentScript && document.currentScript.dataset.cfg) ||
+        window.invisConfig ||
         '{}'
     );
+
+    // Merge with any custom config passed to the function
+    Object.assign(C, customConfig);
 
     /* --------------- zbieranie sygnałów --------------- */
     await new Promise(r => setTimeout(r, 400));           // zbierz ruch użytk.
@@ -39,7 +43,7 @@
     const {token, score} = res;
 
     /* --------------- Turnstile fallback --------------- */
-    if (C.turnstile.enabled && score < C.turnstile.fallback) {
+    if (C.turnstile?.enabled && score < C.turnstile.fallback) {
         await new Promise(ok=>{
             const s=document.createElement('script');
             s.src='https://challenges.cloudflare.com/turnstile/v0/api.js';
@@ -63,7 +67,7 @@
     /* --------------- dynamiczne pola --------------- */
     if (C.dynamic_fields.enabled) {
         const fieldMappings = {};
-        
+
         document.querySelectorAll('form[data-invis]').forEach(f=>{
             [...f.elements].forEach(el=>{
                 const pref = C.dynamic_fields.prefixes
@@ -74,13 +78,13 @@
                             .map(b=>('0'+(b%36).toString(36)).slice(-1)).join('');
                     el.dataset.dyn = el.name;           // zapisz oryginał
                     el.name = newName;
-                    
+
                     // Add to mappings
                     fieldMappings[pref] = newName;
                 }
             });
         });
-        
+
         // Send mappings to server if we have any
         if (Object.keys(fieldMappings).length > 0) {
             fetch('/invis-captcha/field-map', {
@@ -98,4 +102,11 @@
         if(!h){h=document.createElement('input');h.type='hidden';h.name='invis_token';f.appendChild(h);}
         h.value=token;
     });
+
+    return { token, score };
+};
+
+// Auto-execute the function when the script is loaded
+(async () => {
+    await window.invisCaptcha();
 })();

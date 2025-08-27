@@ -18,28 +18,121 @@ class Verify
         $thr = $threshold ?? $cfg['threshold'];
 
         /* honey-field */
-        if ($cfg['honey_field']['enabled']
-            && $req->filled($cfg['honey_field']['name'])) {
-            abort(419, Lang::has('invis::errors.honey_field') 
-                ? __('invis::errors.honey_field') 
-                : 'Bot (honey field)');
+        if ($cfg['honey_field']['enabled']) {
+            // Check in regular request
+            if ($req->filled($cfg['honey_field']['name'])) {
+                abort(419, Lang::has('invis::errors.honey_field') 
+                    ? __('invis::errors.honey_field') 
+                    : 'Bot (honey field)');
+            }
+            
+            // Check in Livewire request
+            if ($req->has('components') && is_array($req->input('components'))) {
+                foreach ($req->input('components') as $component) {
+                    // Check in snapshot data (JSON string)
+                    if (isset($component['snapshot'])) {
+                        $snapshot = json_decode($component['snapshot'], true);
+                        if (isset($snapshot['data'][$cfg['honey_field']['name']])) {
+                            abort(419, Lang::has('invis::errors.honey_field') 
+                                ? __('invis::errors.honey_field') 
+                                : 'Bot (honey field)');
+                        }
+                    }
+                    
+                    // Check in updates data
+                    if (isset($component['updates'][$cfg['honey_field']['name']])) {
+                        abort(419, Lang::has('invis::errors.honey_field') 
+                            ? __('invis::errors.honey_field') 
+                            : 'Bot (honey field)');
+                    }
+                    
+                    // Legacy check in direct data
+                    if (isset($component['data'][$cfg['honey_field']['name']])) {
+                        abort(419, Lang::has('invis::errors.honey_field') 
+                            ? __('invis::errors.honey_field') 
+                            : 'Bot (honey field)');
+                    }
+                }
+            }
         }
 
         /* Turnstile bypass */
-        if ($cfg['turnstile']['enabled'] && $req->filled('turnstile_token')) {
-            // Turnstile REST verification
-            try {
-                $ok = $this->verifyTurnstile($req->input('turnstile_token'), $req->ip());
-                if ($ok) return $next($req);
-            } catch (\Exception $e) {
-                abort(419, Lang::has('invis::errors.turnstile_error') 
-                    ? __('invis::errors.turnstile_error') 
-                    : 'Błąd weryfikacji Turnstile');
+        if ($cfg['turnstile']['enabled']) {
+            $turnstileToken = null;
+            
+            // Check in regular request
+            if ($req->filled('turnstile_token')) {
+                $turnstileToken = $req->input('turnstile_token');
+            }
+            
+            // Check in Livewire request
+            if (!$turnstileToken && $req->has('components') && is_array($req->input('components'))) {
+                foreach ($req->input('components') as $component) {
+                    // Check in snapshot data (JSON string)
+                    if (isset($component['snapshot'])) {
+                        $snapshot = json_decode($component['snapshot'], true);
+                        if (isset($snapshot['data']['turnstile_token'])) {
+                            $turnstileToken = $snapshot['data']['turnstile_token'];
+                            break;
+                        }
+                    }
+                    
+                    // Check in updates data
+                    if (isset($component['updates']['turnstile_token'])) {
+                        $turnstileToken = $component['updates']['turnstile_token'];
+                        break;
+                    }
+                    
+                    // Legacy check in direct data
+                    if (isset($component['data']['turnstile_token'])) {
+                        $turnstileToken = $component['data']['turnstile_token'];
+                        break;
+                    }
+                }
+            }
+            
+            // Verify token if found
+            if ($turnstileToken) {
+                try {
+                    $ok = $this->verifyTurnstile($turnstileToken, $req->ip());
+                    if ($ok) return $next($req);
+                } catch (\Exception $e) {
+                    abort(419, Lang::has('invis::errors.turnstile_error') 
+                        ? __('invis::errors.turnstile_error') 
+                        : 'Błąd weryfikacji Turnstile');
+                }
             }
         }
 
         /* Invisible token */
         $jwt = $req->input('invis_token');
+        
+        // Check in Livewire request if not found in regular request
+        if (!$jwt && $req->has('components') && is_array($req->input('components'))) {
+            foreach ($req->input('components') as $component) {
+                // Check in snapshot data (JSON string)
+                if (isset($component['snapshot'])) {
+                    $snapshot = json_decode($component['snapshot'], true);
+                    if (isset($snapshot['data']['invis_token'])) {
+                        $jwt = $snapshot['data']['invis_token'];
+                        break;
+                    }
+                }
+                
+                // Check in updates data
+                if (isset($component['updates']['invis_token'])) {
+                    $jwt = $component['updates']['invis_token'];
+                    break;
+                }
+                
+                // Legacy check in direct data
+                if (isset($component['data']['invis_token'])) {
+                    $jwt = $component['data']['invis_token'];
+                    break;
+                }
+            }
+        }
+        
         if (!$jwt) {
             abort(419, Lang::has('invis::errors.missing_token') 
                 ? __('invis::errors.missing_token') 
@@ -83,6 +176,7 @@ class Verify
 
         /* normalizacja dynamicznych pól */
         if ($cfg['dynamic_fields']['enabled']) {
+            // Process regular request fields
             $originalFields = [];
             $dynamicFields = [];
             
@@ -93,11 +187,102 @@ class Verify
                 }
             }
             
-            // Remove dynamic fields and add original ones
+            // Remove dynamic fields and add original ones for regular request
             if (!empty($originalFields)) {
                 $req->merge($originalFields);
                 foreach ($dynamicFields as $field) {
                     $req->request->remove($field);
+                }
+            }
+            
+            // Process Livewire request fields
+            if ($req->has('components') && is_array($req->input('components'))) {
+                $components = $req->input('components');
+                $updatedComponents = false;
+                
+                foreach ($components as $i => $component) {
+                    // Process snapshot data
+                    if (isset($component['snapshot'])) {
+                        $snapshot = json_decode($component['snapshot'], true);
+                        if (isset($snapshot['data']) && is_array($snapshot['data'])) {
+                            $originalSnapshotFields = [];
+                            $dynamicSnapshotFields = [];
+                            
+                            foreach ($snapshot['data'] as $k => $v) {
+                                if ($o = DynamicFields::original($k)) {
+                                    $originalSnapshotFields[$o] = $v;
+                                    $dynamicSnapshotFields[] = $k;
+                                    $updatedComponents = true;
+                                }
+                            }
+                            
+                            // Add original fields to snapshot data
+                            foreach ($originalSnapshotFields as $field => $value) {
+                                $snapshot['data'][$field] = $value;
+                            }
+                            
+                            // Remove dynamic fields from snapshot data
+                            foreach ($dynamicSnapshotFields as $field) {
+                                unset($snapshot['data'][$field]);
+                            }
+                            
+                            // Update the snapshot in the component
+                            $components[$i]['snapshot'] = json_encode($snapshot);
+                        }
+                    }
+                    
+                    // Process updates data
+                    if (isset($component['updates']) && is_array($component['updates'])) {
+                        $originalUpdatesFields = [];
+                        $dynamicUpdatesFields = [];
+                        
+                        foreach ($component['updates'] as $k => $v) {
+                            if ($o = DynamicFields::original($k)) {
+                                $originalUpdatesFields[$o] = $v;
+                                $dynamicUpdatesFields[] = $k;
+                                $updatedComponents = true;
+                            }
+                        }
+                        
+                        // Add original fields to updates data
+                        foreach ($originalUpdatesFields as $field => $value) {
+                            $components[$i]['updates'][$field] = $value;
+                        }
+                        
+                        // Remove dynamic fields from updates data
+                        foreach ($dynamicUpdatesFields as $field) {
+                            unset($components[$i]['updates'][$field]);
+                        }
+                    }
+                    
+                    // Legacy: Process direct data fields
+                    if (isset($component['data']) && is_array($component['data'])) {
+                        $originalLivewireFields = [];
+                        $dynamicLivewireFields = [];
+                        
+                        foreach ($component['data'] as $k => $v) {
+                            if ($o = DynamicFields::original($k)) {
+                                $originalLivewireFields[$o] = $v;
+                                $dynamicLivewireFields[] = $k;
+                                $updatedComponents = true;
+                            }
+                        }
+                        
+                        // Add original fields to component data
+                        foreach ($originalLivewireFields as $field => $value) {
+                            $components[$i]['data'][$field] = $value;
+                        }
+                        
+                        // Remove dynamic fields from component data
+                        foreach ($dynamicLivewireFields as $field) {
+                            unset($components[$i]['data'][$field]);
+                        }
+                    }
+                }
+                
+                // Update the request with normalized component data
+                if ($updatedComponents) {
+                    $req->merge(['components' => $components]);
                 }
             }
         }
