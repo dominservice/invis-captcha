@@ -17,6 +17,10 @@ class Verify
         $cfg = config('invis');
         $thr = $threshold ?? $cfg['threshold'];
 
+        if (!empty($cfg['skip_authenticated']) && app()->bound('auth') && $req->user()) {
+            return $next($req);
+        }
+
         /* honey-field */
         if ($cfg['honey_field']['enabled']) {
             // Check in regular request

@@ -43,6 +43,9 @@ class InvisibleServiceProvider extends LaravelServiceProvider
 
         /* directive @invisCaptcha */
         Blade::directive('invisCaptcha', function () {
+            if (config('invis.skip_authenticated') && app()->bound('auth') && auth()->check()) {
+                return '';
+            }
             $cfg = json_encode([
                 'dynamic_fields' => config('invis.dynamic_fields'),
                 'polyfill_poison'=> config('invis.polyfill_poison'),

@@ -3,6 +3,7 @@
 return [
     'threshold' => 0.7,
     'secret'    => env('INVIS_SECRET', \Illuminate\Support\Str::random(32)),
+    'skip_authenticated' => env('INVIS_SKIP_AUTHENTICATED', false),
 
     /* — modules — */
     'track_pixel' => [

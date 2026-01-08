@@ -62,6 +62,7 @@ The configuration file `config/invis.php` allows you to customize:
 
 - Secret key for JWT tokens
 - Score threshold for bot detection
+- Bypass invis for authenticated users (`skip_authenticated`)
 - Honeypot field settings
 - Dynamic field name generation
 - Cloudflare Turnstile integration
