@@ -41,7 +41,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('app.debug', true);
 
         // Set up invis config
-        $app['config']->set('invis.secret', 'test-secret-key');
+        $app['config']->set('invis.secret', 'test-secret-key-min-32-bytes-long');
         $app['config']->set('invis.threshold', 0.5);
         $app['config']->set('invis.honey_field.enabled', true);
         $app['config']->set('invis.honey_field.name', 'website');

@@ -68,6 +68,8 @@ The configuration file `config/invis.php` allows you to customize:
 - Cloudflare Turnstile integration
 - Tracking pixel options
 
+`INVIS_SECRET` should be at least 32 bytes when using HS256 (required by `firebase/php-jwt` 7.x).
+
 Toggle any module with `true` / `false`:
 
 ## Framework-specific wiring

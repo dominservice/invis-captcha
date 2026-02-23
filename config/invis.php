@@ -2,6 +2,7 @@
 /* Published to config_path('invis.php') */
 return [
     'threshold' => 0.7,
+    // HS256 in firebase/php-jwt 7.x requires at least 32 bytes.
     'secret'    => env('INVIS_SECRET', \Illuminate\Support\Str::random(32)),
     'skip_authenticated' => env('INVIS_SKIP_AUTHENTICATED', false),
 
