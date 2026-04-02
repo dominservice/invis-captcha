@@ -4,58 +4,59 @@ namespace Dominservice\Invisible\Tests\Unit\ML;
 
 use Dominservice\Invisible\ML\Scorer;
 use Dominservice\Invisible\Tests\TestCase;
-use Mockery;
 
 class ScorerTest extends TestCase
 {
-    /** @test */
-    public function it_can_be_instantiated()
+    public function test_it_can_be_instantiated()
     {
         $scorer = new Scorer();
+
         $this->assertInstanceOf(Scorer::class, $scorer);
     }
 
-    /** @test */
-    public function it_can_load_model_from_file()
+    public function test_it_uses_heuristic_mode_when_model_file_is_missing()
     {
-        // Create a temporary model file
-        $modelPath = sys_get_temp_dir() . '/test_model.json';
-        file_put_contents($modelPath, json_encode(['test' => 'model']));
+        $scorer = Scorer::load(sys_get_temp_dir().'/missing-invis-model.json');
+
+        $this->assertLessThan(0.5, $scorer->predict([
+            'wd' => 1,
+            'mm' => 1,
+            'kb' => 0,
+        ]));
+    }
+
+    public function test_it_can_load_threshold_model_from_file()
+    {
+        $modelPath = sys_get_temp_dir().'/invis-threshold-model.json';
+
+        file_put_contents($modelPath, json_encode([
+            'intercept' => 1.0,
+            'thresholds' => [
+                'mm' => ['<' => 3, 'penalty' => -0.2],
+                'kb' => ['<' => 1, 'penalty' => -0.2],
+            ],
+        ]));
 
         $scorer = Scorer::load($modelPath);
-        
+
         $this->assertInstanceOf(Scorer::class, $scorer);
-        
-        // Clean up
+        $this->assertEqualsWithDelta(0.6, $scorer->predict([
+            'mm' => 1,
+            'kb' => 0,
+        ]), 0.00001);
+
         unlink($modelPath);
     }
 
-    /** @test */
-    public function it_can_set_model_directly()
+    public function test_it_can_predict_score_based_on_input()
     {
-        $model = ['test' => 'model'];
         $scorer = new Scorer();
-        $scorer->setModel($model);
-        
-        $this->assertInstanceOf(Scorer::class, $scorer);
-    }
 
-    /** @test */
-    public function it_can_predict_score_based_on_input()
-    {
-        $scorer = new Scorer();
-        
-        // Test with high-risk inputs (should return low score)
-        $highRiskInput = ['wd' => 1, 'mm' => 1, 'kb' => 0];
-        $highRiskScore = $scorer->predict($highRiskInput);
+        $highRiskScore = $scorer->predict(['wd' => 1, 'mm' => 1, 'kb' => 0]);
+        $lowRiskScore = $scorer->predict(['wd' => 0, 'mm' => 10, 'kb' => 10]);
+
         $this->assertLessThan(0.5, $highRiskScore);
-        
-        // Test with low-risk inputs (should return high score)
-        $lowRiskInput = ['wd' => 0, 'mm' => 10, 'kb' => 10];
-        $lowRiskScore = $scorer->predict($lowRiskInput);
         $this->assertGreaterThan(0.5, $lowRiskScore);
-        
-        // Verify score is between 0 and 1
         $this->assertGreaterThanOrEqual(0, $highRiskScore);
         $this->assertLessThanOrEqual(1, $highRiskScore);
         $this->assertGreaterThanOrEqual(0, $lowRiskScore);

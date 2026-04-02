@@ -7,8 +7,7 @@ use Illuminate\Support\Facades\Blade;
 
 class InvisibleLivewireTest extends TestCase
 {
-    /** @test */
-    public function it_renders_livewire_directive()
+    public function test_it_renders_livewire_directive()
     {
         $this->app->singleton('invis', function () {
             return new \Dominservice\Invisible\Invisible();
@@ -20,11 +19,11 @@ class InvisibleLivewireTest extends TestCase
         $this->assertStringContainsString('livewire:load', $output);
         $this->assertStringContainsString('Livewire.hook', $output);
         $this->assertStringContainsString('window.invisConfig', $output);
-        $this->assertStringContainsString('form[wire\\\\:submit]', $output);
+        $this->assertStringContainsString('initInvisForLivewire', $output);
+        $this->assertStringContainsString('window.invisCaptcha(window.invisConfig)', $output);
     }
 
-    /** @test */
-    public function it_generates_livewire_script()
+    public function test_it_generates_livewire_script()
     {
         $invisible = new \Dominservice\Invisible\Invisible();
         $script = $invisible->livewireScript();
@@ -33,6 +32,7 @@ class InvisibleLivewireTest extends TestCase
         $this->assertStringContainsString('livewire:load', $script);
         $this->assertStringContainsString('Livewire.hook', $script);
         $this->assertStringContainsString('window.invisConfig', $script);
-        $this->assertStringContainsString('invis.js', $script);
+        $this->assertStringContainsString('initInvisForLivewire', $script);
+        $this->assertStringContainsString('window.invisCaptcha(window.invisConfig)', $script);
     }
 }

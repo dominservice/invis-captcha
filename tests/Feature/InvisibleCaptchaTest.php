@@ -48,8 +48,7 @@ EOT;
         file_put_contents(base_path('resources/views/test-blade.blade.php'), $viewContent);
     }
     
-    /** @test */
-    public function blade_directive_renders_correctly()
+    public function test_blade_directive_renders_correctly()
     {
         // For debugging
         $this->withoutExceptionHandling();
@@ -60,8 +59,7 @@ EOT;
         $response->assertSee('vendor/invis-captcha/invis.js', false);
     }
     
-    /** @test */
-    public function protected_route_rejects_requests_without_token()
+    public function test_protected_route_rejects_requests_without_token()
     {
         $response = $this->post('/protected-route', [
             'name' => 'Test User'
@@ -70,8 +68,7 @@ EOT;
         $response->assertStatus(419);
     }
     
-    /** @test */
-    public function protected_route_rejects_requests_with_invalid_token()
+    public function test_protected_route_rejects_requests_with_invalid_token()
     {
         $response = $this->post('/protected-route', [
             'name' => 'Test User',
@@ -81,8 +78,7 @@ EOT;
         $response->assertStatus(419);
     }
     
-    /** @test */
-    public function protected_route_accepts_requests_with_valid_token()
+    public function test_protected_route_accepts_requests_with_valid_token()
     {
         // For debugging
         $this->withoutExceptionHandling();
@@ -104,8 +100,7 @@ EOT;
         $response->assertJson(['success' => true]);
     }
     
-    /** @test */
-    public function honey_field_rejects_bot_submissions()
+    public function test_honey_field_rejects_bot_submissions()
     {
         $payload = [
             'exp' => time() + 3600,

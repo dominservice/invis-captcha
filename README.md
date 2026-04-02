@@ -13,7 +13,8 @@
 | **9.x** | ✅ | Requires PHP ≥ 8.1 |
 | **10.x**| ✅ | Classic “Kernel + `app/Http`” structure |
 | **11.x**| ✅ | *New streamlined structure* (no Kernel by default) |
-| **12.x**| ✅ | Identical to 11 — tested with 12.0.0-beta |
+| **12.x**| ✅ | Identical to 11 |
+| **13.x**| ✅ | Requires the PHP version supported by Laravel 13 |
 
 If you are **upgrading** an older app to 11/12 you may still keep the classic structure – follow the *≤10* instructions.
 

@@ -39,6 +39,7 @@ abstract class TestCase extends Orchestra
         // Set app key for encryption
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
         $app['config']->set('app.debug', true);
+        $app['config']->set('app.locale', 'en');
 
         // Set up invis config
         $app['config']->set('invis.secret', 'test-secret-key-min-32-bytes-long');
