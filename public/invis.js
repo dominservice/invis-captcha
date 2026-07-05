@@ -1,4 +1,37 @@
 /* global turnstile */
+window._mouseMoves = window._mouseMoves || 0;
+window._keyPress = window._keyPress || 0;
+
+if (!window.__dominserviceInvisTrackingInitialized) {
+    window.__dominserviceInvisTrackingInitialized = true;
+
+    const scheduleRefresh = function () {
+        clearTimeout(window.__dominserviceInvisRefreshTimeout);
+        window.__dominserviceInvisRefreshTimeout = window.setTimeout(function () {
+            if (typeof window.invisCaptcha === 'function') {
+                window.invisCaptcha().catch(function () {});
+            }
+        }, 250);
+    };
+
+    const incrementMouseMoves = function (amount = 1) {
+        window._mouseMoves = (window._mouseMoves || 0) + amount;
+        scheduleRefresh();
+    };
+
+    const incrementKeyPress = function () {
+        window._keyPress = (window._keyPress || 0) + 1;
+        scheduleRefresh();
+    };
+
+    window.addEventListener('mousemove', function () { incrementMouseMoves(1); }, { passive: true });
+    window.addEventListener('mousedown', function () { incrementMouseMoves(3); }, { passive: true });
+    window.addEventListener('click', function () { incrementMouseMoves(3); }, { passive: true });
+    window.addEventListener('touchstart', function () { incrementMouseMoves(3); }, { passive: true });
+    window.addEventListener('keydown', incrementKeyPress, { passive: true });
+    window.addEventListener('input', incrementKeyPress, { passive: true });
+}
+
 // Define the main function that can be called at any time
 window.invisCaptcha = async function(customConfig = {}) {
     // Get config from script tag, window.invisConfig (for Livewire), or passed customConfig
@@ -16,6 +49,8 @@ window.invisCaptcha = async function(customConfig = {}) {
             await window.DominserviceFingerprintTracking.state.ready;
         } catch (e) {}
     }
+
+    const forms = document.querySelectorAll('form[data-invis]');
 
     /* --------------- zbieranie sygnałów --------------- */
     await new Promise(r => setTimeout(r, 400));           // zbierz ruch użytk.
@@ -64,7 +99,7 @@ window.invisCaptcha = async function(customConfig = {}) {
             s.src='https://challenges.cloudflare.com/turnstile/v0/api.js';
             s.onload=ok; document.head.appendChild(s);
         });
-        document.querySelectorAll('form[data-invis]').forEach(f=>{
+        forms.forEach(f=>{
             const d=document.createElement('div');
             d.className='cf-turnstile';
             d.dataset.sitekey=C.turnstile.sitekey;
@@ -72,7 +107,7 @@ window.invisCaptcha = async function(customConfig = {}) {
             f.appendChild(d);
         });
         window._tsOK=t=>{
-            document.querySelectorAll('form[data-invis]')
+            forms
                 .forEach(f=>f.insertAdjacentHTML('beforeend',
                     `<input type="hidden" name="turnstile_token" value="${t}">`));
         };
@@ -83,7 +118,7 @@ window.invisCaptcha = async function(customConfig = {}) {
     if (C.dynamic_fields.enabled) {
         const fieldMappings = {};
 
-        document.querySelectorAll('form[data-invis]').forEach(f=>{
+        forms.forEach(f=>{
             [...f.elements].forEach(el=>{
                 const pref = C.dynamic_fields.prefixes
                     .find(p=>el.name===p && !el.dataset.dyn);
@@ -112,7 +147,7 @@ window.invisCaptcha = async function(customConfig = {}) {
     }
 
     /* --------------- wstrzyknięcie tokenu --------------- */
-    document.querySelectorAll('form[data-invis]').forEach(f=>{
+    forms.forEach(f=>{
         let h=f.querySelector('input[name="invis_token"]');
         if(!h){h=document.createElement('input');h.type='hidden';h.name='invis_token';f.appendChild(h);}
         h.value=token;

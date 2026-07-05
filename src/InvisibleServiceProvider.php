@@ -51,8 +51,15 @@ class InvisibleServiceProvider extends LaravelServiceProvider
                 'polyfill_poison'=> config('invis.polyfill_poison'),
                 'turnstile'      => config('invis.turnstile'),
             ]);
+            $scriptPath = public_path('vendor/invis-captcha/invis.js');
+            $scriptUrl = asset('vendor/invis-captcha/invis.js');
+
+            if (is_file($scriptPath)) {
+                $scriptUrl .= '?v=' . filemtime($scriptPath);
+            }
+
             $html =
-                '<script defer src="'.asset('vendor/invis-captcha/invis.js').'"
+                '<script defer src="'.$scriptUrl.'"
                  data-cfg=\''.e($cfg).'\'></script>';
 
             if (config('invis.track_pixel.enabled')) {
