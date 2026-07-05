@@ -145,6 +145,7 @@ class Verify
 
         try {
             $data = JWT::decode($jwt, new Key($cfg['secret'], 'HS256'));
+            $payload = (array) $data;
             
             // Check if token is valid (not expired, same IP, score above threshold)
             if ($data->exp < time()) {
@@ -164,6 +165,9 @@ class Verify
                     ? __('invis::errors.score_too_low') 
                     : 'Podejrzane działanie');
             }
+
+            $this->hydrateRequestFromPayload($req, $payload);
+            $this->synchronizeFingerprintTracking($req, $payload);
         } catch (ExpiredException $e) {
             abort(419, Lang::has('invis::errors.token_expired') 
                 ? __('invis::errors.token_expired') 
@@ -172,6 +176,8 @@ class Verify
             abort(419, Lang::has('invis::errors.invalid_signature') 
                 ? __('invis::errors.invalid_signature') 
                 : 'Nieprawidłowy podpis tokenu');
+        } catch (\RuntimeException $e) {
+            abort(419, $e->getMessage());
         } catch (\Exception $e) {
             abort(419, Lang::has('invis::errors.invalid_token') 
                 ? __('invis::errors.invalid_token') 
@@ -291,6 +297,41 @@ class Verify
             }
         }
         return $next($req);
+    }
+
+    protected function hydrateRequestFromPayload($req, array $payload): void
+    {
+        $payloadAttribute = (string) config('invis.integrations.fingerprint_tracking.payload_attribute', 'invis_payload');
+        $req->attributes->set($payloadAttribute, $payload);
+
+        $merge = [];
+
+        if (!empty($payload['fingerprint']) && !$req->filled('fingerprint')) {
+            $merge['fingerprint'] = $payload['fingerprint'];
+        }
+
+        if (!empty($payload['tracking_event_ulid']) && !$req->filled('tracking_event_ulid')) {
+            $merge['tracking_event_ulid'] = $payload['tracking_event_ulid'];
+        }
+
+        if (!empty($merge)) {
+            $req->merge($merge);
+        }
+    }
+
+    protected function synchronizeFingerprintTracking($req, array $payload): void
+    {
+        if (!config('invis.integrations.fingerprint_tracking.enabled', true)) {
+            return;
+        }
+
+        $synchronizerClass = 'Dominservice\\FingerprintTracking\\Services\\TrackingEventSynchronizer';
+
+        if (!class_exists($synchronizerClass) || !app()->bound($synchronizerClass)) {
+            return;
+        }
+
+        app($synchronizerClass)->synchronizeProtectedRequest($req, $payload);
     }
 
     protected function verifyTurnstile(string $token, string $ip): bool

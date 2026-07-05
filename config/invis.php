@@ -41,4 +41,11 @@ return [
         'secret'   => env('TURNSTILE_SECRET'),
         'fallback' => 0.30,
     ],
+
+    'integrations' => [
+        'fingerprint_tracking' => [
+            'enabled' => env('INVIS_FINGERPRINT_TRACKING_ENABLED', true),
+            'payload_attribute' => 'invis_payload',
+        ],
+    ],
 ];

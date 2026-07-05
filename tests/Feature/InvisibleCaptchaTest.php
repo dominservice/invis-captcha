@@ -21,6 +21,15 @@ class InvisibleCaptchaTest extends TestCase
             Route::post('/protected-route', function () {
                 return response()->json(['success' => true]);
             })->middleware('invis.verify');
+
+            Route::post('/protected-route-with-payload', function (\Illuminate\Http\Request $request) {
+                return response()->json([
+                    'success' => true,
+                    'fingerprint' => $request->input('fingerprint'),
+                    'tracking_event_ulid' => $request->input('tracking_event_ulid'),
+                    'payload' => $request->attributes->get('invis_payload'),
+                ]);
+            })->middleware('invis.verify');
         });
         
         // Create test blade view
@@ -117,6 +126,34 @@ EOT;
         ]);
         
         $response->assertStatus(419);
+    }
+
+    public function test_middleware_exposes_tracking_payload_on_request()
+    {
+        $payload = [
+            'exp' => time() + 3600,
+            'ip' => '127.0.0.1',
+            'score' => 0.8,
+            'fingerprint' => 'fp-invis-1',
+            'tracking_event_ulid' => '01JZC9E6F2Q3T6Z8R1N4B7M9CC',
+        ];
+
+        $token = JWT::encode($payload, config('invis.secret'), 'HS256');
+
+        $response = $this->post('/protected-route-with-payload', [
+            'name' => 'Test User',
+            'invis_token' => $token,
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'success' => true,
+                'fingerprint' => 'fp-invis-1',
+                'tracking_event_ulid' => '01JZC9E6F2Q3T6Z8R1N4B7M9CC',
+            ])
+            ->assertJsonPath('payload.fingerprint', 'fp-invis-1')
+            ->assertJsonPath('payload.tracking_event_ulid', '01JZC9E6F2Q3T6Z8R1N4B7M9CC')
+            ->assertJsonPath('payload.score', 0.8);
     }
     
     protected function tearDown(): void

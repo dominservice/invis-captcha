@@ -30,6 +30,7 @@ If you are **upgrading** an older app to 11/12 you may still keep the classic st
 | **Polyfill-Poisoning** | Patches browser APIs (e.g. `Canvas.toDataURL()`) to break fingerprint-spoofers. | `polyfill_poison.enabled` |
 | **Cloudflare Turnstile fallback** | Shows Turnstile widget only for low scores. | `turnstile.enabled` |
 | **Pluggable ML model** | Drop-in JSON model for advanced scoring. | `ml_model.enabled` |
+| **Fingerprint correlation** | Can cooperate with `dominservice/laravel-fingerprint-tracking` to correlate public requests and forms. | automatic when both packages are installed |
 
 ---
 ## Installation
@@ -68,6 +69,7 @@ The configuration file `config/invis.php` allows you to customize:
 - Dynamic field name generation
 - Cloudflare Turnstile integration
 - Tracking pixel options
+- Optional fingerprint-tracking integration for protected request correlation
 
 `INVIS_SECRET` should be at least 32 bytes when using HS256 (required by `firebase/php-jwt` 7.x).
 
@@ -152,6 +154,27 @@ public function __construct()
    - Other behavioral signals
 3. A JWT token with the score is sent with the form
 4. The middleware validates the token and rejects suspicious submissions
+5. If tracking integration is enabled, the decoded payload is attached to the request and can synchronize the protected submit with an earlier public tracking event
+
+## Integration with `laravel-fingerprint-tracking`
+
+If `dominservice/laravel-fingerprint-tracking` is installed, the recommended layout order is:
+
+```blade
+@fingerprintTracking
+@invisCaptcha
+```
+
+When both packages are active:
+
+- `invis-captcha` waits for the tracking package to finish its initial public event call,
+- the signal payload includes `fingerprint`,
+- the signal payload includes `tracking_event_ulid`,
+- the decoded JWT payload is attached to the request as `invis_payload`,
+- if the tracking package is available, the protected submit can update the stored tracking event with verification metadata,
+- protected forms receive hidden correlation fields together with `invis_token`.
+
+This integration intentionally uses the public-safe ULID field `tracking_event_ulid` and does not expose incremental tracking IDs.
 
 ## Advanced Usage
 

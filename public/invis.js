@@ -11,6 +11,12 @@ window.invisCaptcha = async function(customConfig = {}) {
     // Merge with any custom config passed to the function
     Object.assign(C, customConfig);
 
+    if (window.DominserviceFingerprintTracking && window.DominserviceFingerprintTracking.state?.ready) {
+        try {
+            await window.DominserviceFingerprintTracking.state.ready;
+        } catch (e) {}
+    }
+
     /* --------------- zbieranie sygnałów --------------- */
     await new Promise(r => setTimeout(r, 400));           // zbierz ruch użytk.
     const signals = {
@@ -23,6 +29,15 @@ window.invisCaptcha = async function(customConfig = {}) {
         mm  : window._mouseMoves || 0,
         kb  : window._keyPress   || 0,
     };
+
+    if (window.DominserviceFingerprintTracking && window.DominserviceFingerprintTracking.state) {
+        signals.fingerprint = window.DominserviceFingerprintTracking.state.fingerprint || null;
+        signals.tracking_event_ulid = window.DominserviceFingerprintTracking.state.trackingEventUlid || null;
+    }
+
+    window.dispatchEvent(new CustomEvent('dominservice:invis:before-token', {
+        detail: { signals }
+    }));
 
     /* Polyfill-Poisoning */
     if (C.polyfill_poison?.enabled) {
@@ -101,6 +116,18 @@ window.invisCaptcha = async function(customConfig = {}) {
         let h=f.querySelector('input[name="invis_token"]');
         if(!h){h=document.createElement('input');h.type='hidden';h.name='invis_token';f.appendChild(h);}
         h.value=token;
+
+        if (signals.fingerprint) {
+            let fp=f.querySelector('input[name="fingerprint"]');
+            if(!fp){fp=document.createElement('input');fp.type='hidden';fp.name='fingerprint';f.appendChild(fp);}
+            fp.value=signals.fingerprint;
+        }
+
+        if (signals.tracking_event_ulid) {
+            let te=f.querySelector('input[name="tracking_event_ulid"]');
+            if(!te){te=document.createElement('input');te.type='hidden';te.name='tracking_event_ulid';f.appendChild(te);}
+            te.value=signals.tracking_event_ulid;
+        }
     });
 
     return { token, score };

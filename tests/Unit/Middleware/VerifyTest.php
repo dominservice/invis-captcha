@@ -44,7 +44,7 @@ class VerifyTest extends TestCase
             'invis_token' => 'invalid-token',
         ]);
 
-        $this->expectHttpException(__('invis::errors.invalid_token'));
+        $this->expectHttpException('Wrong number of segments');
 
         $this->middleware->handle($request, fn () => new Response());
     }
@@ -74,7 +74,7 @@ class VerifyTest extends TestCase
             ]),
         ], [], [], ['REMOTE_ADDR' => '127.0.0.1']);
 
-        $this->expectHttpException(__('invis::errors.invalid_token'));
+        $this->expectHttpException('IP address mismatch');
 
         $this->middleware->handle($request, fn () => new Response());
     }
@@ -89,7 +89,7 @@ class VerifyTest extends TestCase
             ]),
         ], [], [], ['REMOTE_ADDR' => '127.0.0.1']);
 
-        $this->expectHttpException(__('invis::errors.invalid_token'));
+        $this->expectHttpException('Suspicious activity detected');
 
         $this->middleware->handle($request, fn () => new Response());
     }

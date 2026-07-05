@@ -20,6 +20,8 @@ Route::post('/invis-captcha/token', function(\Illuminate\Http\Request $req){
         'score'=>$score,
         'exp'  => now()->addMinutes(2)->timestamp,
         'ip'   => $req->ip(),
+        'fingerprint' => $sig['fingerprint'] ?? null,
+        'tracking_event_ulid' => $sig['tracking_event_ulid'] ?? null,
     ], config('invis.secret'), 'HS256');
 
     Log::channel('invis')->info('score', ['ip'=>$req->ip(),'s'=>$score]);
