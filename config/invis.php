@@ -4,7 +4,7 @@ return [
     'threshold' => 0.7,
     // HS256 in firebase/php-jwt 7.x requires at least 32 bytes.
     'secret'    => env('INVIS_SECRET', \Illuminate\Support\Str::random(32)),
-    'bind_ip' => env('INVIS_BIND_IP', true),
+    'bind_ip' => env('INVIS_BIND_IP', false),
     'skip_authenticated' => env('INVIS_SKIP_AUTHENTICATED', false),
 
     /* — modules — */
@@ -48,5 +48,10 @@ return [
             'enabled' => env('INVIS_FINGERPRINT_TRACKING_ENABLED', true),
             'payload_attribute' => 'invis_payload',
         ],
+    ],
+
+    'debug' => [
+        'enabled' => env('INVIS_DEBUG_ENABLED', false),
+        'endpoint' => env('INVIS_DEBUG_ENDPOINT', '/invis-captcha/client-debug'),
     ],
 ];

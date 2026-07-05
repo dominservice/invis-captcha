@@ -50,6 +50,7 @@ class InvisibleServiceProvider extends LaravelServiceProvider
                 'dynamic_fields' => config('invis.dynamic_fields'),
                 'polyfill_poison'=> config('invis.polyfill_poison'),
                 'turnstile'      => config('invis.turnstile'),
+                'debug'          => config('invis.debug'),
             ]);
             $scriptPath = public_path('vendor/invis-captcha/invis.js');
             $scriptUrl = asset('vendor/invis-captcha/invis.js');

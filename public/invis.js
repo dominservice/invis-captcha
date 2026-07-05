@@ -1,9 +1,66 @@
 /* global turnstile */
 window._mouseMoves = window._mouseMoves || 0;
 window._keyPress = window._keyPress || 0;
+window.__dominserviceInvisRawConfig = window.__dominserviceInvisRawConfig || null;
+
+function dominserviceInvisGetRawConfig() {
+    if (window.__dominserviceInvisRawConfig) {
+        return window.__dominserviceInvisRawConfig;
+    }
+
+    if (document.currentScript && document.currentScript.dataset && document.currentScript.dataset.cfg) {
+        window.__dominserviceInvisRawConfig = document.currentScript.dataset.cfg;
+        return window.__dominserviceInvisRawConfig;
+    }
+
+    const script = document.querySelector('script[src*="vendor/invis-captcha/invis.js"][data-cfg]');
+
+    if (script && script.dataset && script.dataset.cfg) {
+        window.__dominserviceInvisRawConfig = script.dataset.cfg;
+        return window.__dominserviceInvisRawConfig;
+    }
+
+    return window.invisConfig || '{}';
+}
+
+function dominserviceInvisDebug(eventName, context) {
+    let config;
+
+    try {
+        config = JSON.parse(dominserviceInvisGetRawConfig());
+    } catch (error) {
+        return;
+    }
+
+    if (!config.debug || !config.debug.enabled || !config.debug.endpoint) {
+        return;
+    }
+
+    const payload = JSON.stringify({
+        event: eventName,
+        context: context || {},
+        url: window.location.href
+    });
+
+    try {
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(config.debug.endpoint, new Blob([payload], { type: 'application/json' }));
+            return;
+        }
+
+        fetch(config.debug.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            credentials: 'same-origin',
+            keepalive: true
+        }).catch(function () {});
+    } catch (error) {}
+}
 
 if (!window.__dominserviceInvisTrackingInitialized) {
     window.__dominserviceInvisTrackingInitialized = true;
+    dominserviceInvisDebug('tracking_init', {});
 
     const scheduleRefresh = function () {
         clearTimeout(window.__dominserviceInvisRefreshTimeout);
@@ -32,13 +89,101 @@ if (!window.__dominserviceInvisTrackingInitialized) {
     window.addEventListener('input', incrementKeyPress, { passive: true });
 }
 
+if (!window.__dominserviceInvisSubmitGuardInitialized) {
+    window.__dominserviceInvisSubmitGuardInitialized = true;
+    dominserviceInvisDebug('submit_guard_init', {});
+
+    const refreshTokenBeforeSubmit = async function () {
+        if (typeof window.invisCaptcha !== 'function') {
+            return;
+        }
+
+        await window.invisCaptcha();
+    };
+
+    document.addEventListener('click', function (event) {
+        const submitter = event.target instanceof Element
+            ? event.target.closest('button[type="submit"], input[type="submit"]')
+            : null;
+
+        if (!submitter || submitter.dataset.invisBypass === '1') {
+            return;
+        }
+
+        const form = submitter.form || submitter.closest('form');
+
+        if (!form || !form.matches('form[data-invis]')) {
+            return;
+        }
+
+        dominserviceInvisDebug('click_submit_intercepted', {
+            formId: form.id || null,
+            submitterId: submitter.id || null
+        });
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        refreshTokenBeforeSubmit()
+            .then(function () {
+                submitter.dataset.invisBypass = '1';
+                submitter.click();
+            })
+            .finally(function () {
+                window.setTimeout(function () {
+                    delete submitter.dataset.invisBypass;
+                }, 0);
+            });
+    }, true);
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target;
+
+        if (!(form instanceof HTMLFormElement) || !form.matches('form[data-invis]')) {
+            return;
+        }
+
+        if (form.dataset.invisSubmitBypass === '1') {
+            return;
+        }
+
+        const submitter = event.submitter || null;
+
+        if (submitter && submitter.dataset && submitter.dataset.invisBypass === '1') {
+            return;
+        }
+
+        dominserviceInvisDebug('form_submit_intercepted', {
+            formId: form.id || null,
+            submitterId: submitter && submitter.id ? submitter.id : null
+        });
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        refreshTokenBeforeSubmit()
+            .then(function () {
+                form.dataset.invisSubmitBypass = '1';
+
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit(submitter || undefined);
+                } else {
+                    form.submit();
+                }
+            })
+            .finally(function () {
+                window.setTimeout(function () {
+                    delete form.dataset.invisSubmitBypass;
+                }, 0);
+            });
+    }, true);
+}
+
 // Define the main function that can be called at any time
 window.invisCaptcha = async function(customConfig = {}) {
     // Get config from script tag, window.invisConfig (for Livewire), or passed customConfig
     const C = JSON.parse(
-        (document.currentScript && document.currentScript.dataset.cfg) ||
-        window.invisConfig ||
-        '{}'
+        dominserviceInvisGetRawConfig()
     );
 
     // Merge with any custom config passed to the function
@@ -51,6 +196,7 @@ window.invisCaptcha = async function(customConfig = {}) {
     }
 
     const forms = document.querySelectorAll('form[data-invis]');
+    dominserviceInvisDebug('invis_start', { formsCount: forms.length });
 
     /* --------------- zbieranie sygnałów --------------- */
     await new Promise(r => setTimeout(r, 400));           // zbierz ruch użytk.
@@ -84,12 +230,25 @@ window.invisCaptcha = async function(customConfig = {}) {
     }
 
     /* --------------- pobranie tokenu --------------- */
-    const res   = await fetch('/invis-captcha/token', {
+    dominserviceInvisDebug('token_request_start', {
+        mm: signals.mm,
+        kb: signals.kb,
+        wd: signals.wd
+    });
+
+    const response = await fetch('/invis-captcha/token', {
         method : 'POST',
         headers: {'Content-Type':'application/json'},
         body   : JSON.stringify(signals),
         credentials:'same-origin'
-    }).then(r => r.json());
+    });
+    const res = await response.json();
+    dominserviceInvisDebug('token_request_done', {
+        ok: response.ok,
+        status: response.status,
+        hasToken: !!res.token,
+        score: res.score ?? null
+    });
     const {token, score} = res;
 
     /* --------------- Turnstile fallback --------------- */
@@ -115,7 +274,7 @@ window.invisCaptcha = async function(customConfig = {}) {
     }
 
     /* --------------- dynamiczne pola --------------- */
-    if (C.dynamic_fields.enabled) {
+    if (C.dynamic_fields && C.dynamic_fields.enabled) {
         const fieldMappings = {};
 
         forms.forEach(f=>{
@@ -165,10 +324,24 @@ window.invisCaptcha = async function(customConfig = {}) {
         }
     });
 
+    dominserviceInvisDebug('token_injected', {
+        formsCount: forms.length,
+        hasToken: !!token,
+        score: score
+    });
+
     return { token, score };
 };
 
 // Auto-execute the function when the script is loaded
 (async () => {
-    await window.invisCaptcha();
+    try {
+        dominserviceInvisDebug('bootstrap_start', {});
+        await window.invisCaptcha();
+        dominserviceInvisDebug('bootstrap_done', {});
+    } catch (error) {
+        dominserviceInvisDebug('bootstrap_failed', {
+            message: error && error.message ? error.message : String(error)
+        });
+    }
 })();

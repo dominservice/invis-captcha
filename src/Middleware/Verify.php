@@ -9,6 +9,7 @@ use Firebase\JWT\SignatureInvalidException;
 use Dominservice\Invisible\Helpers\DynamicFields;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class Verify
 {
@@ -25,8 +26,8 @@ class Verify
         if ($cfg['honey_field']['enabled']) {
             // Check in regular request
             if ($req->filled($cfg['honey_field']['name'])) {
-                abort(419, Lang::has('invis::errors.honey_field') 
-                    ? __('invis::errors.honey_field') 
+                $this->abortWithLog($req, 'honey_field_regular', Lang::has('invis::errors.honey_field')
+                    ? __('invis::errors.honey_field')
                     : 'Bot (honey field)');
             }
             
@@ -37,23 +38,23 @@ class Verify
                     if (isset($component['snapshot'])) {
                         $snapshot = json_decode($component['snapshot'], true);
                         if (isset($snapshot['data'][$cfg['honey_field']['name']])) {
-                            abort(419, Lang::has('invis::errors.honey_field') 
-                                ? __('invis::errors.honey_field') 
+                            $this->abortWithLog($req, 'honey_field_livewire_snapshot', Lang::has('invis::errors.honey_field')
+                                ? __('invis::errors.honey_field')
                                 : 'Bot (honey field)');
                         }
                     }
                     
                     // Check in updates data
                     if (isset($component['updates'][$cfg['honey_field']['name']])) {
-                        abort(419, Lang::has('invis::errors.honey_field') 
-                            ? __('invis::errors.honey_field') 
+                        $this->abortWithLog($req, 'honey_field_livewire_updates', Lang::has('invis::errors.honey_field')
+                            ? __('invis::errors.honey_field')
                             : 'Bot (honey field)');
                     }
                     
                     // Legacy check in direct data
                     if (isset($component['data'][$cfg['honey_field']['name']])) {
-                        abort(419, Lang::has('invis::errors.honey_field') 
-                            ? __('invis::errors.honey_field') 
+                        $this->abortWithLog($req, 'honey_field_livewire_data', Lang::has('invis::errors.honey_field')
+                            ? __('invis::errors.honey_field')
                             : 'Bot (honey field)');
                     }
                 }
@@ -101,9 +102,9 @@ class Verify
                     $ok = $this->verifyTurnstile($turnstileToken, $req->ip());
                     if ($ok) return $next($req);
                 } catch (\Exception $e) {
-                    abort(419, Lang::has('invis::errors.turnstile_error') 
-                        ? __('invis::errors.turnstile_error') 
-                        : 'Błąd weryfikacji Turnstile');
+                    $this->abortWithLog($req, 'turnstile_error', Lang::has('invis::errors.turnstile_error')
+                        ? __('invis::errors.turnstile_error')
+                        : 'Błąd weryfikacji Turnstile', ['exception' => $e->getMessage()]);
                 }
             }
         }
@@ -138,8 +139,8 @@ class Verify
         }
         
         if (!$jwt) {
-            abort(419, Lang::has('invis::errors.missing_token') 
-                ? __('invis::errors.missing_token') 
+            $this->abortWithLog($req, 'missing_token', Lang::has('invis::errors.missing_token')
+                ? __('invis::errors.missing_token')
                 : 'Brak tokenu');
         }
 
@@ -149,39 +150,39 @@ class Verify
             
             // Check if token is valid (not expired, same IP, score above threshold)
             if ($data->exp < time()) {
-                abort(419, Lang::has('invis::errors.token_expired') 
-                    ? __('invis::errors.token_expired') 
-                    : 'Token wygasł');
+                $this->abortWithLog($req, 'token_expired', Lang::has('invis::errors.token_expired')
+                    ? __('invis::errors.token_expired')
+                    : 'Token wygasł', ['payload' => $payload]);
             }
             
-            if ($data->ip !== $req->ip()) {
-                abort(419, Lang::has('invis::errors.ip_mismatch') 
-                    ? __('invis::errors.ip_mismatch') 
-                    : 'Niezgodność IP');
+            if (($cfg['bind_ip'] ?? true) && ($data->ip ?? null) !== $req->ip()) {
+                $this->abortWithLog($req, 'ip_mismatch', Lang::has('invis::errors.ip_mismatch')
+                    ? __('invis::errors.ip_mismatch')
+                    : 'Niezgodność IP', ['payload_ip' => $data->ip ?? null, 'request_ip' => $req->ip()]);
             }
             
             if ($data->score < $thr) {
-                abort(419, Lang::has('invis::errors.score_too_low') 
-                    ? __('invis::errors.score_too_low') 
-                    : 'Podejrzane działanie');
+                $this->abortWithLog($req, 'score_too_low', Lang::has('invis::errors.score_too_low')
+                    ? __('invis::errors.score_too_low')
+                    : 'Podejrzane działanie', ['score' => $data->score, 'threshold' => $thr]);
             }
 
             $this->hydrateRequestFromPayload($req, $payload);
             $this->synchronizeFingerprintTracking($req, $payload);
         } catch (ExpiredException $e) {
-            abort(419, Lang::has('invis::errors.token_expired') 
-                ? __('invis::errors.token_expired') 
-                : 'Token wygasł');
+            $this->abortWithLog($req, 'token_expired_exception', Lang::has('invis::errors.token_expired')
+                ? __('invis::errors.token_expired')
+                : 'Token wygasł', ['exception' => $e->getMessage()]);
         } catch (SignatureInvalidException $e) {
-            abort(419, Lang::has('invis::errors.invalid_signature') 
-                ? __('invis::errors.invalid_signature') 
-                : 'Nieprawidłowy podpis tokenu');
+            $this->abortWithLog($req, 'invalid_signature', Lang::has('invis::errors.invalid_signature')
+                ? __('invis::errors.invalid_signature')
+                : 'Nieprawidłowy podpis tokenu', ['exception' => $e->getMessage()]);
         } catch (\RuntimeException $e) {
-            abort(419, $e->getMessage());
+            $this->abortWithLog($req, 'runtime_exception', $e->getMessage(), ['exception' => $e->getMessage()]);
         } catch (\Exception $e) {
-            abort(419, Lang::has('invis::errors.invalid_token') 
-                ? __('invis::errors.invalid_token') 
-                : 'Token nieważny');
+            $this->abortWithLog($req, 'invalid_token', Lang::has('invis::errors.invalid_token')
+                ? __('invis::errors.invalid_token')
+                : 'Token nieważny', ['exception' => $e->getMessage()]);
         }
 
         /* normalizacja dynamicznych pól */
@@ -297,6 +298,26 @@ class Verify
             }
         }
         return $next($req);
+    }
+
+    protected function abortWithLog($req, string $reason, string $message, array $context = []): void
+    {
+        $channel = config('logging.channels.invis') ? 'invis' : config('logging.default');
+
+        Log::channel($channel)->warning('verify_failed', array_merge([
+            'reason' => $reason,
+            'message' => $message,
+            'request_ip' => $req->ip(),
+            'url' => $req->fullUrl(),
+            'method' => $req->method(),
+            'has_invis_token' => $req->filled('invis_token'),
+            'has_turnstile_token' => $req->filled('turnstile_token'),
+            'fingerprint' => $req->input('fingerprint'),
+            'tracking_event_ulid' => $req->input('tracking_event_ulid'),
+            'user_agent' => $req->userAgent(),
+        ], $context));
+
+        abort(419, $message);
     }
 
     protected function hydrateRequestFromPayload($req, array $payload): void
