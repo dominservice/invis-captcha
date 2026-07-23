@@ -63,8 +63,8 @@ class InvisibleServiceProvider extends LaravelServiceProvider
                  data-cfg=\''.e($cfg).'\'></script>';
 
             if (config('invis.track_pixel.enabled')) {
-                $html .= '<img src="'.url(config('invis.track_pixel.route'))
-                    .'?id='. \Illuminate\Support\Str::uuid().'" width="1" height="1" style="display:none">';
+                $html .= '<img src="'.e(url(config('invis.track_pixel.route')))
+                    .'" alt="" width="1" height="1" aria-hidden="true" style="display:none">';
             }
             if (config('invis.honey_field.enabled')) {
                 $name = e(config('invis.honey_field.name'));

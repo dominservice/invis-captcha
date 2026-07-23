@@ -66,6 +66,23 @@ EOT;
         
         $response->assertStatus(200);
         $response->assertSee('vendor/invis-captcha/invis.js', false);
+        $response->assertSee('src="http://localhost/invis-captcha/pixel"', false);
+        $response->assertDontSee('/invis-captcha/pixel?id=', false);
+    }
+
+    public function test_tracking_pixel_uses_a_stable_non_indexable_url()
+    {
+        $response = $this->get('/invis-captcha/pixel');
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'image/gif')
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+
+        $cacheControl = (string) $response->headers->get('Cache-Control');
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('private', $cacheControl);
+        $this->assertStringContainsString('max-age=0', $cacheControl);
+        $this->assertSame('GIF89a', substr((string) $response->getContent(), 0, 6));
     }
     
     public function test_protected_route_rejects_requests_without_token()

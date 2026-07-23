@@ -24,7 +24,8 @@ Route::post('/invis-captcha/token', function(\Illuminate\Http\Request $req){
         'tracking_event_ulid' => $sig['tracking_event_ulid'] ?? null,
     ], config('invis.secret'), 'HS256');
 
-    Log::channel('invis')->info('score', ['ip'=>$req->ip(),'s'=>$score]);
+    $logChannel = config('logging.channels.invis') ? 'invis' : config('logging.default');
+    Log::channel($logChannel)->info('score', ['ip'=>$req->ip(),'s'=>$score]);
     return ['token'=>$jwt,'score'=>$score];
 });
 
@@ -46,7 +47,16 @@ if (config('invis.dynamic_fields.enabled')) {
 /* 1-px pixel */
 if (config('invis.track_pixel.enabled')) {
     Route::get(config('invis.track_pixel.route'), function(\Illuminate\Http\Request $r){
-        Log::channel('invis')->info('pixel', ['ip'=>$r->ip(),'ua'=>$r->userAgent()]);
-        return response()->stream(fn()=>'GIF87a', 200, ['Content-Type'=>'image/gif']);
+        $logChannel = config('logging.channels.invis') ? 'invis' : config('logging.default');
+        Log::channel($logChannel)->info('pixel', ['ip'=>$r->ip(),'ua'=>$r->userAgent()]);
+        $pixel = base64_decode('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', true);
+
+        return response($pixel, 200, [
+            'Content-Type' => 'image/gif',
+            'Content-Length' => (string) strlen($pixel),
+            'Cache-Control' => 'no-store, private, max-age=0',
+            'Pragma' => 'no-cache',
+            'X-Robots-Tag' => 'noindex, nofollow, noarchive',
+        ]);
     });
 }
